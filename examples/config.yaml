@@ -1,0 +1,18 @@
+model: gpt-4.1-mini
+embedding_model: text-embedding-3-small
+api_base_url: https://api.openai.com/v1
+api_key_env: OPENAI_API_KEY
+categories:
+  - genai-llm-agents
+  - rag-search-embeddings
+  - backend-api-frameworks
+  - frontend-ui-frameworks
+  - mobile-react-native
+  - databases-vector-search
+  - cloud-devops-infra
+  - developer-tools
+  - ai-learning-resources
+  - software-architecture
+  - product-ideas
+  - other
+
