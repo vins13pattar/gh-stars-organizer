@@ -30,6 +30,7 @@ class AppConfig(BaseModel):
     github_page_size: int = 100
     cache_db_path: Path = Path("~/.gh-stars-organizer/cache.db").expanduser()
     faiss_index_path: Path = Path("~/.gh-stars-organizer/embeddings.index").expanduser()
+    local_lists_path: Path = Path("~/.gh-stars-organizer/lists").expanduser()
     insights_report_path: Path = Path("stars-insights.md")
     inactive_months: int = 18
     llm_requests_per_minute: int = 60
@@ -54,6 +55,7 @@ def load_config(path: Path | None = None) -> AppConfig:
     cfg = AppConfig.model_validate(raw)
     ensure_parent(cfg.cache_db_path)
     ensure_parent(cfg.faiss_index_path)
+    cfg.local_lists_path.mkdir(parents=True, exist_ok=True)
     return cfg
 
 
@@ -65,7 +67,8 @@ def save_config(config: AppConfig, path: Path | None = None) -> Path:
     data = config.model_dump()
     data["cache_db_path"] = str(config.cache_db_path)
     data["faiss_index_path"] = str(config.faiss_index_path)
+    data["local_lists_path"] = str(config.local_lists_path)
     data["insights_report_path"] = str(config.insights_report_path)
+    config.local_lists_path.mkdir(parents=True, exist_ok=True)
     target.write_text(yaml.safe_dump(data, sort_keys=False))
     return target
-

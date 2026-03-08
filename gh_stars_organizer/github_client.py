@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from collections.abc import Callable
 from datetime import datetime
 
 from gh_stars_organizer.models import Repository
@@ -33,7 +34,10 @@ class GitHubClient:
             raise GitHubCLIError(str(payload["errors"]))
         return payload["data"]
 
-    def fetch_starred_repositories(self) -> list[Repository]:
+    def fetch_starred_repositories(
+        self,
+        progress_callback: Callable[[int, int], None] | None = None,
+    ) -> list[Repository]:
         query = """
         query($first: Int!, $after: String) {
           viewer {
@@ -63,7 +67,9 @@ class GitHubClient:
         """
         repos: list[Repository] = []
         cursor: str | None = None
+        page = 0
         while True:
+            page += 1
             data = self._graphql(query, {"first": self.page_size, "after": cursor})
             edge = data["viewer"]["starredRepositories"]
             for node in edge["nodes"]:
@@ -83,6 +89,8 @@ class GitHubClient:
                         is_fork=node["isFork"],
                     )
                 )
+            if progress_callback:
+                progress_callback(page, len(repos))
             page_info = edge["pageInfo"]
             if not page_info["hasNextPage"]:
                 break
@@ -126,4 +134,3 @@ class GitHubClient:
         except GitHubCLIError as exc:
             if "already" not in str(exc).lower():
                 raise
-

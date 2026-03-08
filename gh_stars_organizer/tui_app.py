@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from textual import work
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.work import work
 from textual.widgets import Button, DataTable, Footer, Header, Input, Static
 
 from gh_stars_organizer.config import AppConfig
@@ -105,9 +105,13 @@ class StarsOrganizerTUI(App):
     @work(thread=True, exclusive=True)
     def _sync_task(self) -> None:
         try:
-            repos = self.organizer.sync()
-            self.call_from_thread(self._status, f"Synced {len(repos)} repositories. Refreshing preview...")
-            self.call_from_thread(self._load_preview)
+            repos = self.organizer.sync(
+                status_callback=lambda message: self.call_from_thread(self._status, message)
+            )
+            self.call_from_thread(
+                self._status,
+                f"Sync complete. {len(repos)} repositories cached. Press Preview to classify/view.",
+            )
         except Exception as exc:
             self.call_from_thread(self._status, f"Error: {exc}")
         finally:
@@ -116,7 +120,12 @@ class StarsOrganizerTUI(App):
     @work(thread=True, exclusive=True)
     def _preview_task(self) -> None:
         try:
-            self.call_from_thread(self._load_preview)
+            rows = self.organizer.preview(
+                limit=self.preview_limit,
+                status_callback=lambda message: self.call_from_thread(self._status, message),
+            )
+            self.call_from_thread(self._render_preview_rows, rows)
+            self.call_from_thread(self._status, f"Loaded preview for {len(rows)} repositories.")
         except Exception as exc:
             self.call_from_thread(self._status, f"Error: {exc}")
         finally:
@@ -125,7 +134,15 @@ class StarsOrganizerTUI(App):
     @work(thread=True, exclusive=True)
     def _organize_task(self) -> None:
         try:
-            summary = self.organizer.organize()
+            summary = self.organizer.organize(
+                status_callback=lambda message: self.call_from_thread(self._status, message)
+            )
+            if not summary.get("star_lists_supported", True):
+                self.call_from_thread(
+                    self._status,
+                    str(summary.get("message", "GitHub Star Lists API unavailable for this account.")),
+                )
+                return
             self.call_from_thread(
                 self._status,
                 f"Organize done. Created {summary['lists_created']} lists, "
@@ -139,7 +156,9 @@ class StarsOrganizerTUI(App):
     @work(thread=True, exclusive=True)
     def _insights_task(self) -> None:
         try:
-            report = self.organizer.insights()
+            report = self.organizer.insights(
+                status_callback=lambda message: self.call_from_thread(self._status, message)
+            )
             self.call_from_thread(self._status, f"Insights written to {report}")
         except Exception as exc:
             self.call_from_thread(self._status, f"Error: {exc}")
@@ -150,11 +169,30 @@ class StarsOrganizerTUI(App):
     def _search_task(self, query: str) -> None:
         try:
             self.call_from_thread(self._status, f"Searching for: {query}")
-            self.call_from_thread(self._run_search, query)
+            results = self.organizer.search(query, top_k=15)
+            self.call_from_thread(self._render_search_rows, results)
+            self.call_from_thread(self._status, f"Search complete: {len(results)} results.")
         except Exception as exc:
             self.call_from_thread(self._status, f"Error: {exc}")
         finally:
             self.call_from_thread(self._set_busy, False)
+
+    def _render_preview_rows(self, rows: list[tuple]) -> None:
+        table = self.query_one("#preview-table", DataTable)
+        table.clear(columns=False)
+        for repo, category in rows:
+            table.add_row(repo.full_name, category, repo.primary_language or "-", str(repo.stargazer_count))
+
+    def _render_search_rows(self, results: list) -> None:
+        table = self.query_one("#search-table", DataTable)
+        table.clear(columns=False)
+        for result in results:
+            table.add_row(
+                result.repository.full_name,
+                f"{result.score:.3f}",
+                result.category or "-",
+                result.repository.url,
+            )
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if self.busy:

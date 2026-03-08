@@ -52,6 +52,9 @@ def organize(config_path: Path | None = typer.Option(None, "--config", "-c")) ->
     organizer = StarsOrganizer(cfg, console=console)
     try:
         summary = organizer.organize()
+        if not summary.get("star_lists_supported", True):
+            console.print(f"[yellow]{summary.get('message', 'GitHub Star Lists API unavailable.')}[/yellow]")
+            return
         console.print(
             f"[green]Done.[/green] Created {summary['lists_created']} lists and processed "
             f"{summary['repos_processed']} repository assignments."
