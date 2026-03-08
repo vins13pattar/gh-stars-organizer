@@ -4,6 +4,8 @@
 
 It fetches your starred repositories, classifies them with an LLM, builds embedding-based similarity search, and organizes results into GitHub Lists (with a local fallback when list APIs or scopes are unavailable).
 
+Project site: `https://vins13pattar.github.io/gh-stars-organizer/`
+
 ## Why this exists
 
 Developers star hundreds of repositories and later struggle to find what matters.  
@@ -122,6 +124,7 @@ pytest -q
 ```
 
 CI and release workflows are included in `.github/workflows/`.
+GitHub Pages is deployed from `docs/` via `.github/workflows/pages.yml`.
 
 ## Contributing
 

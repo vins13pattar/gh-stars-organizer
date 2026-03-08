@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>gh-stars-organizer</title>
+    <meta
+      name="description"
+      content="Organize GitHub stars with LLM classification, semantic search, and automated lists."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <nav class="nav container">
+        <div class="brand">⭐ gh-stars-organizer</div>
+        <div class="links">
+          <a href="https://github.com/vins13pattar/gh-stars-organizer" target="_blank" rel="noreferrer">GitHub</a>
+          <a href="https://pypi.org/project/gh-stars-organizer/" target="_blank" rel="noreferrer">PyPI</a>
+        </div>
+      </nav>
+      <div class="container hero-content">
+        <p class="eyebrow">Open-source Python CLI</p>
+        <h1>Turn chaotic GitHub stars into a searchable knowledge map.</h1>
+        <p class="subtitle">
+          Fetch, classify, cluster, and organize starred repositories with LLMs and embeddings.
+        </p>
+        <div class="cta">
+          <a class="btn btn-primary" href="https://github.com/vins13pattar/gh-stars-organizer" target="_blank" rel="noreferrer">Get Started</a>
+          <a class="btn btn-secondary" href="#commands">See Commands</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="container section">
+        <h2>Why developers use it</h2>
+        <div class="grid">
+          <article class="card">
+            <h3>Smart Classification</h3>
+            <p>LLM-based category prediction for each starred repository.</p>
+          </article>
+          <article class="card">
+            <h3>Semantic Search</h3>
+            <p>Find repositories by intent using embeddings + FAISS.</p>
+          </article>
+          <article class="card">
+            <h3>Actionable Insights</h3>
+            <p>Generate category and technology trends in markdown reports.</p>
+          </article>
+          <article class="card">
+            <h3>TUI + CLI</h3>
+            <p>Interactive terminal app and scriptable CLI workflows.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="commands" class="container section">
+        <h2>CLI Commands</h2>
+        <div class="code-block">
+          <pre><code>gh-stars-organizer sync
+gh-stars-organizer preview
+gh-stars-organizer organize
+gh-stars-organizer insights
+gh-stars-organizer search "vector database for rag"
+gh-stars-organizer tui</code></pre>
+        </div>
+      </section>
+
+      <section class="container section">
+        <h2>How it works</h2>
+        <ol class="flow">
+          <li>Fetch starred repositories from GitHub GraphQL</li>
+          <li>Classify with an OpenAI-compatible model</li>
+          <li>Generate embeddings and build similarity index</li>
+          <li>Cache all results in local SQLite</li>
+          <li>Organize into GitHub User Lists (or local fallback)</li>
+        </ol>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <p>Made with ❤️ for developers who star everything.</p>
+      </div>
+    </footer>
+  </body>
+  </html>
+
