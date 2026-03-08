@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling>=1.26.0"]
+requires = ["hatchling>=1.26.0", "hatch-vcs>=0.4.0"]
 build-backend = "hatchling.build"
 
 [project]
 name = "gh-stars-organizer"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Organize GitHub starred repositories into intelligent Star Lists with LLMs and embeddings."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -34,3 +34,9 @@ gh-stars-organizer = "gh_stars_organizer.cli:app"
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "gh_stars_organizer/_version.py"

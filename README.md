@@ -194,6 +194,14 @@ python -m build
 twine upload dist/*
 ```
 
+### Versioning
+
+Package version is derived from Git tags via `hatch-vcs`.
+
+- Create a release tag like `v1.0.1`
+- The published PyPI version is generated from that tag
+- Keep GitHub tag and PyPI version aligned by tagging the intended release version
+
 ## Future Extensions
 
 Designed to support:
