@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
+from textual.work import work
 from textual.widgets import Button, DataTable, Footer, Header, Input, Static
 
 from gh_stars_organizer.config import AppConfig
@@ -9,6 +10,8 @@ from gh_stars_organizer.organizer import StarsOrganizer
 
 
 class StarsOrganizerTUI(App):
+    ENABLE_COMMAND_PALETTE = False
+
     CSS = """
     Screen {
         layout: vertical;
@@ -38,6 +41,7 @@ class StarsOrganizerTUI(App):
         self.preview_limit = 300
         self.preview_initialized = False
         self.search_initialized = False
+        self.busy = False
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -71,6 +75,12 @@ class StarsOrganizerTUI(App):
     def _status(self, message: str) -> None:
         self.query_one("#status", Static).update(message)
 
+    def _set_busy(self, busy: bool) -> None:
+        self.busy = busy
+        for button_id in ("sync", "preview", "organize", "insights", "search"):
+            self.query_one(f"#{button_id}", Button).disabled = busy
+        self.query_one("#search-box", Input).disabled = busy
+
     def _load_preview(self) -> None:
         table = self.query_one("#preview-table", DataTable)
         rows = self.organizer.preview(limit=self.preview_limit)
@@ -92,37 +102,88 @@ class StarsOrganizerTUI(App):
             )
         self._status(f"Search complete: {len(results)} results.")
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        button_id = event.button.id
+    @work(thread=True, exclusive=True)
+    def _sync_task(self) -> None:
         try:
-            if button_id == "sync":
-                self._status("Syncing starred repositories...")
-                repos = self.organizer.sync()
-                self._status(f"Synced {len(repos)} repositories. Refreshing preview...")
-                self._load_preview()
-            elif button_id == "preview":
-                self._status("Refreshing preview...")
-                self._load_preview()
-            elif button_id == "organize":
-                self._status("Organizing starred lists...")
-                summary = self.organizer.organize()
-                self._status(
-                    f"Organize done. Created {summary['lists_created']} lists, "
-                    f"processed {summary['repos_processed']} assignments."
-                )
-            elif button_id == "insights":
-                self._status("Generating insights report...")
-                report = self.organizer.insights()
-                self._status(f"Insights written to {report}")
-            elif button_id == "search":
-                query = self.query_one("#search-box", Input).value.strip()
-                if not query:
-                    self._status("Enter a query to search.")
-                    return
-                self._status(f"Searching for: {query}")
-                self._run_search(query)
+            repos = self.organizer.sync()
+            self.call_from_thread(self._status, f"Synced {len(repos)} repositories. Refreshing preview...")
+            self.call_from_thread(self._load_preview)
         except Exception as exc:
-            self._status(f"Error: {exc}")
+            self.call_from_thread(self._status, f"Error: {exc}")
+        finally:
+            self.call_from_thread(self._set_busy, False)
+
+    @work(thread=True, exclusive=True)
+    def _preview_task(self) -> None:
+        try:
+            self.call_from_thread(self._load_preview)
+        except Exception as exc:
+            self.call_from_thread(self._status, f"Error: {exc}")
+        finally:
+            self.call_from_thread(self._set_busy, False)
+
+    @work(thread=True, exclusive=True)
+    def _organize_task(self) -> None:
+        try:
+            summary = self.organizer.organize()
+            self.call_from_thread(
+                self._status,
+                f"Organize done. Created {summary['lists_created']} lists, "
+                f"processed {summary['repos_processed']} assignments.",
+            )
+        except Exception as exc:
+            self.call_from_thread(self._status, f"Error: {exc}")
+        finally:
+            self.call_from_thread(self._set_busy, False)
+
+    @work(thread=True, exclusive=True)
+    def _insights_task(self) -> None:
+        try:
+            report = self.organizer.insights()
+            self.call_from_thread(self._status, f"Insights written to {report}")
+        except Exception as exc:
+            self.call_from_thread(self._status, f"Error: {exc}")
+        finally:
+            self.call_from_thread(self._set_busy, False)
+
+    @work(thread=True, exclusive=True)
+    def _search_task(self, query: str) -> None:
+        try:
+            self.call_from_thread(self._status, f"Searching for: {query}")
+            self.call_from_thread(self._run_search, query)
+        except Exception as exc:
+            self.call_from_thread(self._status, f"Error: {exc}")
+        finally:
+            self.call_from_thread(self._set_busy, False)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if self.busy:
+            self._status("Working... please wait.")
+            return
+        button_id = event.button.id
+        if button_id == "sync":
+            self._set_busy(True)
+            self._status("Syncing starred repositories...")
+            self._sync_task()
+        elif button_id == "preview":
+            self._set_busy(True)
+            self._status("Refreshing preview...")
+            self._preview_task()
+        elif button_id == "organize":
+            self._set_busy(True)
+            self._status("Organizing starred lists...")
+            self._organize_task()
+        elif button_id == "insights":
+            self._set_busy(True)
+            self._status("Generating insights report...")
+            self._insights_task()
+        elif button_id == "search":
+            query = self.query_one("#search-box", Input).value.strip()
+            if not query:
+                self._status("Enter a query to search.")
+                return
+            self._set_busy(True)
+            self._search_task(query)
 
 
 def launch_tui(config: AppConfig) -> None:
