@@ -49,17 +49,25 @@ def test_fetch_starred_repositories_pagination(monkeypatch):
 
 def test_get_starred_lists_uses_user_lists(monkeypatch):
     client = GitHubClient(page_size=1)
+    calls = {"count": 0}
 
     def fake_graphql(query, variables=None):
-        assert "viewer" in query
-        assert "lists(first: 100)" in query
+        calls["count"] += 1
+        assert "lists(first: $first, after: $after)" in query
+        if calls["count"] == 1:
+            return {
+                "viewer": {
+                    "lists": {
+                        "nodes": [{"id": "L_1", "name": "genai-llm-agents"}],
+                        "pageInfo": {"hasNextPage": True, "endCursor": "CUR_1"},
+                    }
+                }
+            }
         return {
             "viewer": {
                 "lists": {
-                    "nodes": [
-                        {"id": "L_1", "name": "genai-llm-agents"},
-                        {"id": "L_2", "name": "developer-tools"},
-                    ]
+                    "nodes": [{"id": "L_2", "name": "developer-tools"}],
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
                 }
             }
         }
@@ -68,6 +76,7 @@ def test_get_starred_lists_uses_user_lists(monkeypatch):
     lists = client.get_starred_lists()
     assert lists["genai-llm-agents"] == "L_1"
     assert lists["developer-tools"] == "L_2"
+    assert calls["count"] == 2
 
 
 def test_add_repository_to_list_uses_update_user_lists(monkeypatch):

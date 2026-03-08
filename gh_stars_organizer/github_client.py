@@ -104,16 +104,27 @@ class GitHubClient:
 
     def get_starred_lists(self) -> dict[str, str]:
         query = """
-        query {
+        query($first: Int!, $after: String) {
           viewer {
-            lists(first: 100) {
+            lists(first: $first, after: $after) {
               nodes { id name }
+              pageInfo { hasNextPage endCursor }
             }
           }
         }
         """
-        data = self._graphql(query)
-        return {item["name"]: item["id"] for item in data["viewer"]["lists"]["nodes"]}
+        lists: dict[str, str] = {}
+        cursor: str | None = None
+        while True:
+            data = self._graphql(query, {"first": 100, "after": cursor})
+            connection = data["viewer"]["lists"]
+            for item in connection["nodes"]:
+                lists[item["name"]] = item["id"]
+            page_info = connection["pageInfo"]
+            if not page_info["hasNextPage"]:
+                break
+            cursor = page_info["endCursor"]
+        return lists
 
     def create_starred_list(self, name: str) -> str:
         mutation = """

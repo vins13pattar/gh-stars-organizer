@@ -182,20 +182,39 @@ class StarsOrganizer:
                     ),
                 }
             raise
+        existing_lists_lower = {name.lower(): list_id for name, list_id in existing_lists.items()}
         created = 0
         added = 0
         for category, repos in grouped.items():
             list_name = category
-            list_id = existing_lists.get(list_name)
+            list_id = existing_lists_lower.get(list_name.lower())
             if not list_id:
+                created_new = False
                 if status_callback:
                     status_callback(f"Creating GitHub list: {list_name}")
                 self.console.print(f"[cyan]Creating list:[/cyan] {list_name}")
                 try:
                     list_id = self.github.create_starred_list(list_name)
+                    created_new = True
                 except GitHubCLIError as exc:
                     message = str(exc)
-                    if ("createUserList" in message and "doesn't exist" in message) or (
+                    if "Name has already been taken" in message:
+                        refreshed = self.github.get_starred_lists()
+                        refreshed_lower = {name.lower(): current_id for name, current_id in refreshed.items()}
+                        reused_id = refreshed_lower.get(list_name.lower())
+                        if reused_id:
+                            list_id = reused_id
+                            existing_lists = refreshed
+                            existing_lists_lower = refreshed_lower
+                            if status_callback:
+                                status_callback(f"Reusing existing list: {list_name}")
+                        else:
+                            if status_callback:
+                                status_callback(
+                                    f"List name conflict for '{list_name}'. Skipping this category."
+                                )
+                            continue
+                    elif ("createUserList" in message and "doesn't exist" in message) or (
                         "createStarredRepositoryList" in message and "doesn't exist" in message
                     ):
                         output_dir, local_created = self._write_local_lists(grouped)
@@ -213,7 +232,7 @@ class StarsOrganizer:
                             "local_lists_path": str(output_dir),
                             "message": f"GitHub list-creation API unavailable. Local categorized lists generated at {output_dir}.",
                         }
-                    if "INSUFFICIENT_SCOPES" in message or "requires one of the following scopes: ['user']" in message:
+                    elif "INSUFFICIENT_SCOPES" in message or "requires one of the following scopes: ['user']" in message:
                         output_dir, local_created = self._write_local_lists(grouped)
                         if status_callback:
                             status_callback(
@@ -232,9 +251,13 @@ class StarsOrganizer:
                                 f"Local categorized lists generated at {output_dir}."
                             ),
                         }
-                    raise
-                existing_lists[list_name] = list_id
-                created += 1
+                    else:
+                        raise
+                if list_id:
+                    existing_lists[list_name] = list_id
+                    existing_lists_lower[list_name.lower()] = list_id
+                    if created_new:
+                        created += 1
             for repo in repos:
                 try:
                     self.github.add_repository_to_list(list_id, repo.id)
