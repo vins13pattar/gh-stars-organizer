@@ -43,3 +43,26 @@ def test_classifier_uses_model_response():
     assert classifier.classify(repo) == "backend-api-frameworks"
     classifier.close()
 
+
+def test_classifier_without_api_key_uses_fallback():
+    classifier = RepositoryClassifier(
+        api_base_url="https://example.test/v1",
+        model="gpt-test",
+        categories=["backend-api-frameworks", "other"],
+    )
+    classifier.api_key = ""
+    classifier.remote_enabled = False
+    repo = Repository(
+        id="2",
+        name="fastapi",
+        owner="fastapi",
+        full_name="fastapi/fastapi",
+        description="High performance web API framework",
+        topics=["api", "backend"],
+        primary_language="Python",
+        stargazer_count=1,
+        url="https://github.com/fastapi/fastapi",
+        updated_at=datetime.now(UTC),
+    )
+    assert classifier.classify(repo) == "backend-api-frameworks"
+    classifier.close()

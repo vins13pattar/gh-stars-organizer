@@ -55,8 +55,15 @@ class StarsOrganizerTUI(App):
         yield Footer()
 
     def on_mount(self) -> None:
-        self._status("Loading preview...")
-        self._load_preview()
+        preview_table = self.query_one("#preview-table", DataTable)
+        search_table = self.query_one("#search-table", DataTable)
+        if not self.preview_initialized:
+            preview_table.add_columns("Repository", "Category", "Language", "Stars")
+            self.preview_initialized = True
+        if not self.search_initialized:
+            search_table.add_columns("Repository", "Score", "Category", "URL")
+            self.search_initialized = True
+        self._status("Ready. Press Sync or Preview to load repositories.")
 
     def on_unmount(self) -> None:
         self.organizer.close()
@@ -68,9 +75,6 @@ class StarsOrganizerTUI(App):
         table = self.query_one("#preview-table", DataTable)
         rows = self.organizer.preview(limit=self.preview_limit)
         table.clear(columns=not self.preview_initialized)
-        if not self.preview_initialized:
-            table.add_columns("Repository", "Category", "Language", "Stars")
-            self.preview_initialized = True
         for repo, category in rows:
             table.add_row(repo.full_name, category, repo.primary_language or "-", str(repo.stargazer_count))
         self._status(f"Loaded preview for {len(rows)} repositories.")
@@ -79,9 +83,6 @@ class StarsOrganizerTUI(App):
         table = self.query_one("#search-table", DataTable)
         results = self.organizer.search(query, top_k=15)
         table.clear(columns=not self.search_initialized)
-        if not self.search_initialized:
-            table.add_columns("Repository", "Score", "Category", "URL")
-            self.search_initialized = True
         for result in results:
             table.add_row(
                 result.repository.full_name,
@@ -127,4 +128,3 @@ class StarsOrganizerTUI(App):
 def launch_tui(config: AppConfig) -> None:
     app = StarsOrganizerTUI(config)
     app.run()
-

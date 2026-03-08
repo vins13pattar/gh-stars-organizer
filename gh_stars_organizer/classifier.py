@@ -24,6 +24,7 @@ class RepositoryClassifier:
         self.model = model
         self.categories = categories
         self.api_key = os.getenv(api_key_env, "")
+        self.remote_enabled = bool(self.api_key)
         self.client = httpx.Client(timeout=30.0, transport=transport)
         self.rate_limiter = RateLimiter(requests_per_minute)
 
@@ -72,6 +73,8 @@ class RepositoryClassifier:
         return category
 
     def classify(self, repo: Repository) -> str:
+        if not self.remote_enabled:
+            return self._fallback_category(repo)
         try:
             return self._request_category(repo)
         except Exception:
@@ -99,4 +102,3 @@ class RepositoryClassifier:
 
     def close(self) -> None:
         self.client.close()
-
