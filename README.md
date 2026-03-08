@@ -87,6 +87,7 @@ gh-stars-organizer preview
 gh-stars-organizer organize
 gh-stars-organizer insights
 gh-stars-organizer search "vector database for RAG"
+gh-stars-organizer tui
 ```
 
 ### Commands
@@ -97,6 +98,21 @@ gh-stars-organizer search "vector database for RAG"
 - `gh-stars-organizer search <query>`
 - `gh-stars-organizer config`
 - `gh-stars-organizer sync`
+- `gh-stars-organizer tui`
+
+### TUI Mode
+
+Launch the interactive terminal UI:
+
+```bash
+gh-stars-organizer tui
+```
+
+It provides:
+
+- One-click sync, preview, organize, and insights actions
+- Semantic search panel
+- Live status updates while operations run
 
 ## Example CLI Output
 

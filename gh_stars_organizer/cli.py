@@ -119,6 +119,13 @@ def config(
     console.print(f"Config file: {path}")
 
 
+@app.command()
+def tui(config_path: Path | None = typer.Option(None, "--config", "-c")) -> None:
+    cfg = _load(config_path)
+    from gh_stars_organizer.tui_app import launch_tui
+
+    launch_tui(cfg)
+
+
 if __name__ == "__main__":
     app()
-
