@@ -32,3 +32,10 @@ pip install -e ".[dev]"
 - Type hints for new modules
 - Prefer small, composable functions
 
+## Release & Versioning
+
+This project uses tag-based versioning with `hatch-vcs`.
+
+- Create a release tag like `v1.0.1`
+- Push the tag and publish a GitHub Release
+- The publish workflow builds and releases the matching version to PyPI

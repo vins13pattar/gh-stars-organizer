@@ -1,26 +1,23 @@
 # gh-stars-organizer
 
-`gh-stars-organizer` is a production-grade CLI that helps developers clean up and navigate huge GitHub star collections using LLM classification, embeddings, local caching, and GitHub Star Lists automation.
+`gh-stars-organizer` helps you turn a chaotic GitHub stars list into a searchable, structured knowledge base.
 
-## Problem Statement
+It fetches your starred repositories, classifies them with an LLM, builds embedding-based similarity search, and organizes results into GitHub Lists (with a local fallback when list APIs or scopes are unavailable).
 
-Most developers star hundreds of repositories, then struggle to rediscover useful ones. This tool solves that by:
+## Why this exists
 
-- Fetching all starred repositories
-- Classifying them into meaningful categories
-- Creating/reusing GitHub Star Lists automatically
-- Building semantic search with embeddings
-- Generating actionable developer insights
+Developers star hundreds of repositories and later struggle to find what matters.  
+This tool makes starred repos discoverable again.
 
-## How It Works
+## Key capabilities
 
-1. Fetch stars via `gh api graphql`
-2. Classify repositories with an OpenAI-compatible LLM
-3. Generate embeddings for semantic similarity
-4. Cache everything in local SQLite
-5. Build/update FAISS index
-6. Create and populate GitHub Star Lists
-7. Produce `stars-insights.md` recommendations
+- Fetch all stars (with pagination for large accounts)
+- LLM-based repository classification into practical engineering categories
+- Embedding-based semantic search and similarity grouping
+- Automatic organization into GitHub User Lists
+- Local cache (SQLite + FAISS) to avoid repeated expensive work
+- Insights report (`stars-insights.md`) with trends and cleanup recommendations
+- Interactive terminal UI (`tui`) for one-click workflows
 
 ## Architecture
 
@@ -30,187 +27,105 @@ flowchart TD
     B --> C["LLM Classification"]
     C --> D["Embeddings Generation"]
     D --> E["Local SQLite Cache"]
-    E --> F["Create/Reuse GitHub Star Lists"]
-    F --> G["Assign Repositories to Lists"]
-    E --> H["Generate Insights Report"]
+    E --> F["Create/Reuse GitHub Lists"]
+    F --> G["Assign Repositories"]
+    E --> H["Insights Report"]
 ```
-
-## Features
-
-- GitHub stars sync with pagination support
-- LLM classification with custom categories
-- Embedding-based semantic search
-- Automatic GitHub Star List creation and assignment
-- Insights report: top categories, technologies, cleanup suggestions
-- Repo discovery engine:
-  - archived candidates
-  - inactive repositories
-  - potential duplicate clusters
-- Local SQLite cache for classifications and embeddings
-- Rate limiting and retries for GitHub and LLM APIs
 
 ## Installation
 
-### Prerequisites
+### Requirements
 
 - Python 3.11+
-- GitHub CLI (`gh`) authenticated (`gh auth status`)
-- GitHub CLI token with `user` scope for GitHub List updates (`gh auth refresh -s user`)
-- `OPENAI_API_KEY` (or compatible API key)
+- [GitHub CLI](https://cli.github.com/) authenticated
+- OpenAI-compatible API key (`OPENAI_API_KEY`) for remote classification/embeddings (optional; local fallbacks exist)
 
 ### Install from source
 
 ```bash
-git clone https://github.com/<your-org>/gh-stars-organizer.git
+git clone https://github.com/vins13pattar/gh-stars-organizer.git
 cd gh-stars-organizer
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
-## Configuration
-
-Default config path: `~/.gh-stars-organizer/config.yaml`
-
-Generate default config:
+## Quickstart
 
 ```bash
 gh-stars-organizer config --init
-```
-
-Example values are in `examples/config.yaml`.
-
-## CLI Usage
-
-```bash
 gh-stars-organizer sync
 gh-stars-organizer preview
 gh-stars-organizer organize
 gh-stars-organizer insights
-gh-stars-organizer search "vector database for RAG"
-gh-stars-organizer tui
 ```
 
-### Commands
+## Commands
 
-- `gh-stars-organizer organize`
-- `gh-stars-organizer preview`
-- `gh-stars-organizer insights`
-- `gh-stars-organizer search <query>`
-- `gh-stars-organizer config`
-- `gh-stars-organizer sync`
-- `gh-stars-organizer tui`
+- `gh-stars-organizer sync` — fetch and cache stars
+- `gh-stars-organizer preview` — show predicted category per repo
+- `gh-stars-organizer organize` — assign repositories into GitHub Lists
+- `gh-stars-organizer insights` — generate `stars-insights.md`
+- `gh-stars-organizer search "<query>"` — semantic repo search
+- `gh-stars-organizer tui` — interactive TUI
+- `gh-stars-organizer config` — initialize/show configuration
 
-### TUI Mode
+## TUI
 
-Launch the interactive terminal UI:
+Launch:
 
 ```bash
 gh-stars-organizer tui
 ```
 
-It provides:
+TUI includes:
 
-- One-click sync, preview, organize, and insights actions
-- Semantic search panel
-- Live status updates while operations run
+- Sync / Preview / Organize / Insights actions
+- Semantic search
+- Live status and progress messages
 
-### GitHub List API Note
+## Configuration
 
-This tool uses GitHub User Lists GraphQL APIs (`lists`, `createUserList`, `updateUserListsForItem`) for organization.
-If your `gh` token is missing `user` scope, organization falls back to local categorized files under `~/.gh-stars-organizer/lists`.
+Default config file: `~/.gh-stars-organizer/config.yaml`  
+Example template: `examples/config.yaml`
 
-## Example CLI Output
+Common options:
 
-```text
-Fetching starred repositories...
-Fetched 742 repositories.
-Classifying repositories...
-langchain-ai/langchain -> genai-llm-agents
-fastapi/fastapi -> backend-api-frameworks
-vercel/next.js -> frontend-ui-frameworks
-Creating list: genai-llm-agents
-Done. Created 8 lists and processed 742 repository assignments.
-```
+- LLM model
+- Embedding model
+- Categories
+- Cache/index/report paths
+- Rate limits
 
-## Insights Report
+## GitHub List behavior
 
-Running `gh-stars-organizer insights` creates `stars-insights.md` with:
+Organization uses GitHub User Lists GraphQL APIs (`lists`, `createUserList`, `updateUserListsForItem`).
 
-- Most Starred Categories
-- Top Technologies
-- Archived/inactive/duplicate recommendations
+- For GitHub list updates, your `gh` auth token needs `user` scope:
+  - `gh auth refresh -s user`
+- If list APIs/scopes are unavailable, the tool generates local categorized lists at:
+  - `~/.gh-stars-organizer/lists`
 
-## Project Structure
+## Example output
 
 ```text
-gh-stars-organizer/
-├── gh_stars_organizer/
-│   ├── cli.py
-│   ├── github_client.py
-│   ├── classifier.py
-│   ├── embeddings.py
-│   ├── cache.py
-│   ├── organizer.py
-│   ├── insights.py
-│   ├── config.py
-│   └── models.py
-├── tests/
-├── examples/
-├── README.md
-├── pyproject.toml
-└── LICENSE
+Fetching stars... page 3, repos 300
+Caching repositories locally...
+Classifying repositories... 120/742
+Organize done. Created 8 lists, processed 742 assignments.
 ```
 
 ## Development
-
-Run tests:
 
 ```bash
 pytest -q
 ```
 
-## GitHub Actions Workflows
+CI and release workflows are included in `.github/workflows/`.
 
-- `CI` (`.github/workflows/ci.yml`): runs tests on Python 3.11/3.12 and validates package build on every push/PR.
-- `Publish` (`.github/workflows/publish.yml`): builds and publishes to PyPI on GitHub Release publish (or manual dispatch).
-
-### PyPI Publishing Setup
-
-Use PyPI Trusted Publishing:
-
-1. In PyPI, create a trusted publisher for this GitHub repository and workflow `publish.yml`.
-2. In GitHub, keep the `pypi` environment (or create it) and allow this workflow to run.
-3. Create a GitHub Release to trigger publish.
-
-## Contribution Guide
+## Contributing
 
 See `CONTRIBUTING.md`.
-
-## Publish to PyPI
-
-```bash
-python -m build
-twine upload dist/*
-```
-
-### Versioning
-
-Package version is derived from Git tags via `hatch-vcs`.
-
-- Create a release tag like `v1.0.1`
-- The published PyPI version is generated from that tag
-- Keep GitHub tag and PyPI version aligned by tagging the intended release version
-
-## Future Extensions
-
-Designed to support:
-
-- automatic repository tagging
-- GitHub Copilot integration
-- developer skill graph
-- AI recommendation workflows
-- VSCode extension integration
 
 ## License
 
