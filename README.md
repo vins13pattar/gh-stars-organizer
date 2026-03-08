@@ -55,6 +55,7 @@ flowchart TD
 
 - Python 3.11+
 - GitHub CLI (`gh`) authenticated (`gh auth status`)
+- GitHub CLI token with `user` scope for GitHub List updates (`gh auth refresh -s user`)
 - `OPENAI_API_KEY` (or compatible API key)
 
 ### Install from source
@@ -113,6 +114,11 @@ It provides:
 - One-click sync, preview, organize, and insights actions
 - Semantic search panel
 - Live status updates while operations run
+
+### GitHub List API Note
+
+This tool uses GitHub User Lists GraphQL APIs (`lists`, `createUserList`, `updateUserListsForItem`) for organization.
+If your `gh` token is missing `user` scope, organization falls back to local categorized files under `~/.gh-stars-organizer/lists`.
 
 ## Example CLI Output
 

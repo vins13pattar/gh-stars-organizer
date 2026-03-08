@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 from collections.abc import Callable
+from typing import Any
 from datetime import datetime
 
 from gh_stars_organizer.models import Repository
@@ -19,13 +20,17 @@ class GitHubClient:
         self.rate_limiter = RateLimiter(requests_per_minute)
 
     @retry(max_attempts=3, base_delay=1.0)
-    def _graphql(self, query: str, variables: dict[str, str | int | None] | None = None) -> dict:
+    def _graphql(self, query: str, variables: dict[str, Any] | None = None) -> dict:
         self.rate_limiter.wait()
         cmd = ["gh", "api", "graphql", "-f", f"query={query}"]
         for key, value in (variables or {}).items():
             if value is None:
                 continue
-            cmd.extend(["-F", f"{key}={value}"])
+            if isinstance(value, list):
+                for item in value:
+                    cmd.extend(["-F", f"{key}[]={item}"])
+            else:
+                cmd.extend(["-F", f"{key}={value}"])
         proc = subprocess.run(cmd, capture_output=True, text=True)
         if proc.returncode != 0:
             raise GitHubCLIError(proc.stderr.strip() or "gh api graphql failed")
@@ -101,36 +106,36 @@ class GitHubClient:
         query = """
         query {
           viewer {
-            starredRepositoryLists(first: 100) {
+            lists(first: 100) {
               nodes { id name }
             }
           }
         }
         """
         data = self._graphql(query)
-        return {item["name"]: item["id"] for item in data["viewer"]["starredRepositoryLists"]["nodes"]}
+        return {item["name"]: item["id"] for item in data["viewer"]["lists"]["nodes"]}
 
     def create_starred_list(self, name: str) -> str:
         mutation = """
         mutation($name: String!) {
-          createStarredRepositoryList(input: {name: $name}) {
-            starredRepositoryList { id name }
+          createUserList(input: {name: $name, isPrivate: true}) {
+            list { id name }
           }
         }
         """
         data = self._graphql(mutation, {"name": name})
-        return data["createStarredRepositoryList"]["starredRepositoryList"]["id"]
+        return data["createUserList"]["list"]["id"]
 
     def add_repository_to_list(self, list_id: str, repo_id: str) -> None:
         mutation = """
-        mutation($listId: ID!, $repoId: ID!) {
-          addStarredRepositoryToList(input: {starredRepositoryListId: $listId, starrableId: $repoId}) {
+        mutation($repoId: ID!, $listIds: [ID!]!) {
+          updateUserListsForItem(input: {itemId: $repoId, listIds: $listIds}) {
             clientMutationId
           }
         }
         """
         try:
-            self._graphql(mutation, {"listId": list_id, "repoId": repo_id})
+            self._graphql(mutation, {"repoId": repo_id, "listIds": [list_id]})
         except GitHubCLIError as exc:
             if "already" not in str(exc).lower():
                 raise

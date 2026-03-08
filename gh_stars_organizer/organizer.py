@@ -144,7 +144,9 @@ class StarsOrganizer:
             existing_lists = self.github.get_starred_lists()
         except GitHubCLIError as exc:
             message = str(exc)
-            if "starredRepositoryLists" in message and "doesn't exist on type 'User'" in message:
+            if ("Field 'lists' doesn't exist on type 'User'" in message) or (
+                "starredRepositoryLists" in message and "doesn't exist on type 'User'" in message
+            ):
                 output_dir, created = self._write_local_lists(grouped)
                 if status_callback:
                     status_callback(
@@ -160,6 +162,25 @@ class StarsOrganizer:
                     "local_lists_path": str(output_dir),
                     "message": f"GitHub Star Lists API unavailable. Local categorized lists generated at {output_dir}.",
                 }
+            if "INSUFFICIENT_SCOPES" in message or "requires one of the following scopes: ['user']" in message:
+                output_dir, created = self._write_local_lists(grouped)
+                if status_callback:
+                    status_callback(
+                        "GitHub list APIs need 'user' scope. Run: gh auth refresh -s user. "
+                        f"Generated local categorized lists at {output_dir}."
+                    )
+                return {
+                    "lists_created": 0,
+                    "repos_processed": len(repositories),
+                    "star_lists_supported": False,
+                    "local_lists_generated": True,
+                    "local_lists_created": created,
+                    "local_lists_path": str(output_dir),
+                    "message": (
+                        "GitHub list APIs require 'user' scope. Run: gh auth refresh -s user. "
+                        f"Local categorized lists generated at {output_dir}."
+                    ),
+                }
             raise
         created = 0
         added = 0
@@ -174,7 +195,9 @@ class StarsOrganizer:
                     list_id = self.github.create_starred_list(list_name)
                 except GitHubCLIError as exc:
                     message = str(exc)
-                    if "createStarredRepositoryList" in message and "doesn't exist" in message:
+                    if ("createUserList" in message and "doesn't exist" in message) or (
+                        "createStarredRepositoryList" in message and "doesn't exist" in message
+                    ):
                         output_dir, local_created = self._write_local_lists(grouped)
                         if status_callback:
                             status_callback(
@@ -190,6 +213,25 @@ class StarsOrganizer:
                             "local_lists_path": str(output_dir),
                             "message": f"GitHub list-creation API unavailable. Local categorized lists generated at {output_dir}.",
                         }
+                    if "INSUFFICIENT_SCOPES" in message or "requires one of the following scopes: ['user']" in message:
+                        output_dir, local_created = self._write_local_lists(grouped)
+                        if status_callback:
+                            status_callback(
+                                "GitHub list APIs need 'user' scope. Run: gh auth refresh -s user. "
+                                f"Generated local categorized lists at {output_dir}."
+                            )
+                        return {
+                            "lists_created": created,
+                            "repos_processed": len(repositories),
+                            "star_lists_supported": False,
+                            "local_lists_generated": True,
+                            "local_lists_created": local_created,
+                            "local_lists_path": str(output_dir),
+                            "message": (
+                                "GitHub list APIs require 'user' scope. Run: gh auth refresh -s user. "
+                                f"Local categorized lists generated at {output_dir}."
+                            ),
+                        }
                     raise
                 existing_lists[list_name] = list_id
                 created += 1
@@ -198,7 +240,9 @@ class StarsOrganizer:
                     self.github.add_repository_to_list(list_id, repo.id)
                 except GitHubCLIError as exc:
                     message = str(exc)
-                    if "addStarredRepositoryToList" in message and "doesn't exist" in message:
+                    if ("updateUserListsForItem" in message and "doesn't exist" in message) or (
+                        "addStarredRepositoryToList" in message and "doesn't exist" in message
+                    ):
                         output_dir, local_created = self._write_local_lists(grouped)
                         if status_callback:
                             status_callback(
@@ -213,6 +257,25 @@ class StarsOrganizer:
                             "local_lists_created": local_created,
                             "local_lists_path": str(output_dir),
                             "message": f"GitHub add-to-list API unavailable. Local categorized lists generated at {output_dir}.",
+                        }
+                    if "INSUFFICIENT_SCOPES" in message or "requires one of the following scopes: ['user']" in message:
+                        output_dir, local_created = self._write_local_lists(grouped)
+                        if status_callback:
+                            status_callback(
+                                "GitHub list APIs need 'user' scope. Run: gh auth refresh -s user. "
+                                f"Generated local categorized lists at {output_dir}."
+                            )
+                        return {
+                            "lists_created": created,
+                            "repos_processed": len(repositories),
+                            "star_lists_supported": False,
+                            "local_lists_generated": True,
+                            "local_lists_created": local_created,
+                            "local_lists_path": str(output_dir),
+                            "message": (
+                                "GitHub list APIs require 'user' scope. Run: gh auth refresh -s user. "
+                                f"Local categorized lists generated at {output_dir}."
+                            ),
                         }
                     raise
                 added += 1
