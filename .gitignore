@@ -14,3 +14,4 @@ build/
 *.egg-info/
 stars-insights.md
 gh_stars_organizer/_version.py
+.claude/
