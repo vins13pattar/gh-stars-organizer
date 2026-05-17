@@ -130,5 +130,18 @@ def tui(config_path: Path | None = typer.Option(None, "--config", "-c")) -> None
     launch_tui(cfg)
 
 
+@app.command()
+def web(
+    host: str = typer.Option("127.0.0.1", "--host", "-H", help="Host to bind."),
+    port: int = typer.Option(8000, "--port", "-p", help="Port to listen on."),
+    config_path: Path | None = typer.Option(None, "--config", "-c"),
+) -> None:
+    """Launch the web UI."""
+    _ = _load(config_path)  # validate config exists
+    from gh_stars_organizer.web_app import launch
+    console.print(f"[bold green]Starting web UI at http://{host}:{port}[/bold green]")
+    launch(host=host, port=port)
+
+
 if __name__ == "__main__":
     app()

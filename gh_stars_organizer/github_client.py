@@ -150,3 +150,73 @@ class GitHubClient:
         except GitHubCLIError as exc:
             if "already" not in str(exc).lower():
                 raise
+
+    def rename_list(self, list_id: str, new_name: str) -> None:
+        mutation = """
+        mutation($listId: ID!, $name: String!) {
+          updateUserList(input: {listId: $listId, name: $name}) {
+            list { id name }
+          }
+        }
+        """
+        self._graphql(mutation, {"listId": list_id, "name": new_name})
+
+    def delete_list(self, list_id: str) -> None:
+        mutation = """
+        mutation($listId: ID!) {
+          deleteUserList(input: {listId: $listId}) {
+            clientMutationId
+          }
+        }
+        """
+        self._graphql(mutation, {"listId": list_id})
+
+    def get_list_repositories(self, list_id: str) -> list[dict]:
+        query = """
+        query($first: Int!, $after: String) {
+          viewer {
+            lists(first: $first, after: $after) {
+              nodes {
+                id
+                name
+                items(first: 100) {
+                  nodes {
+                    ... on Repository {
+                      id
+                      nameWithOwner
+                      url
+                      stargazerCount
+                      primaryLanguage { name }
+                    }
+                  }
+                }
+              }
+              pageInfo { hasNextPage endCursor }
+            }
+          }
+        }
+        """
+        all_lists = []
+        cursor = None
+        while True:
+            data = self._graphql(query, {"first": 25, "after": cursor})
+            connection = data["viewer"]["lists"]
+            all_lists.extend(connection["nodes"])
+            page_info = connection["pageInfo"]
+            if not page_info["hasNextPage"]:
+                break
+            cursor = page_info["endCursor"]
+        for lst in all_lists:
+            if lst["id"] == list_id:
+                return [
+                    {
+                        "id": item["id"],
+                        "full_name": item["nameWithOwner"],
+                        "url": item["url"],
+                        "stars": item.get("stargazerCount", 0),
+                        "language": (item.get("primaryLanguage") or {}).get("name", ""),
+                    }
+                    for item in lst["items"]["nodes"]
+                    if "nameWithOwner" in item
+                ]
+        return []
